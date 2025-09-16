@@ -1,0 +1,258 @@
+<div class="admin-layout">
+  <section class="admin-section">
+    <mat-card class="admin-card">
+      <mat-card-header>
+        <div>
+          <mat-card-title>User management</mat-card-title>
+          <mat-card-subtitle>Invite, edit, or remove users from MediBook.</mat-card-subtitle>
+        </div>
+        <button mat-stroked-button color="primary" type="button" (click)="startNewUser()">
+          {{ isEditingUser ? 'Create new user' : 'Reset form' }}
+        </button>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="panel-grid">
+          <div class="panel-list">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of userList" [class.active-row]="selectedUserId() === user.id">
+                  <td>{{ user.name }}</td>
+                  <td>{{ user.email }}</td>
+                  <td class="role-pill" [attr.data-role]="user.role">{{ user.role | titlecase }}</td>
+                  <td class="actions">
+                    <button mat-button type="button" (click)="editUser(user)">Edit</button>
+                    <button mat-button color="warn" type="button" (click)="deleteUser(user)">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p *ngIf="userList.length === 0" class="empty-hint">No users yet. Add your first user using the form.</p>
+          </div>
+
+          <form class="panel-form" [formGroup]="userForm" (ngSubmit)="saveUser()">
+            <h3>{{ isEditingUser ? 'Edit user' : 'Add new user' }}</h3>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Full name</mat-label>
+              <input matInput formControlName="name" required>
+              <mat-error *ngIf="userForm.get('name')?.hasError('required')">Name is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Email</mat-label>
+              <input matInput formControlName="email" type="email" required>
+              <mat-error *ngIf="userForm.get('email')?.hasError('required')">Email is required</mat-error>
+              <mat-error *ngIf="userForm.get('email')?.hasError('email')">Enter a valid email</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Phone</mat-label>
+              <input matInput formControlName="phone" required>
+              <mat-error *ngIf="userForm.get('phone')?.hasError('required')">Phone number is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Role</mat-label>
+              <mat-select formControlName="role" required>
+                <mat-option *ngFor="let role of roles" [value]="role">{{ role | titlecase }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Password</mat-label>
+              <input matInput formControlName="password" type="password" placeholder="Leave blank to keep current">
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button mat-raised-button color="primary" type="submit">{{ isEditingUser ? 'Save changes' : 'Create user' }}</button>
+            </div>
+          </form>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </section>
+
+  <section class="admin-section">
+    <mat-card class="admin-card">
+      <mat-card-header>
+        <div>
+          <mat-card-title>Appointment management</mat-card-title>
+          <mat-card-subtitle>Coordinate schedules and resolve booking conflicts.</mat-card-subtitle>
+        </div>
+        <button mat-stroked-button color="primary" type="button" (click)="startNewAppointment()">
+          {{ isEditingAppointment ? 'Create new appointment' : 'Reset form' }}
+        </button>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="panel-grid">
+          <div class="panel-list">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Patient</th>
+                  <th>Doctor</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let appointment of appointmentList" [class.active-row]="selectedAppointmentId() === appointment.id">
+                  <td>{{ getUserName(appointment.userId) }}</td>
+                  <td>{{ appointment.doctorName }}</td>
+                  <td>{{ appointment.date | date }}</td>
+                  <td>{{ appointment.time }}</td>
+                  <td class="status-pill" [attr.data-status]="appointment.status">{{ appointment.status | titlecase }}</td>
+                  <td class="actions">
+                    <button mat-button type="button" (click)="editAppointment(appointment)">Edit</button>
+                    <button mat-button color="warn" type="button" (click)="deleteAppointment(appointment)">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p *ngIf="appointmentList.length === 0" class="empty-hint">No appointments scheduled yet.</p>
+          </div>
+
+          <form class="panel-form" [formGroup]="appointmentForm" (ngSubmit)="saveAppointment()">
+            <h3>{{ isEditingAppointment ? 'Edit appointment' : 'Create appointment' }}</h3>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Patient</mat-label>
+              <mat-select formControlName="userId" required>
+                <mat-option *ngFor="let user of userList" [value]="user.id">{{ user.name }}</mat-option>
+              </mat-select>
+              <mat-error *ngIf="appointmentForm.get('userId')?.hasError('required')">Select a patient</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Doctor</mat-label>
+              <mat-select formControlName="doctorId" required>
+                <mat-option *ngFor="let doctor of doctorList" [value]="doctor.id">{{ doctor.name }} · {{ doctor.specialty }}</mat-option>
+              </mat-select>
+              <mat-error *ngIf="appointmentForm.get('doctorId')?.hasError('required')">Select a doctor</mat-error>
+            </mat-form-field>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Date</mat-label>
+                <input matInput formControlName="date" type="date" required>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Time</mat-label>
+                <input matInput formControlName="time" type="time" required>
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Reason</mat-label>
+              <textarea matInput rows="3" formControlName="reason" required></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Status</mat-label>
+              <mat-select formControlName="status" required>
+                <mat-option *ngFor="let status of statuses" [value]="status">{{ status | titlecase }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button mat-raised-button color="primary" type="submit">{{ isEditingAppointment ? 'Save changes' : 'Create appointment' }}</button>
+            </div>
+          </form>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </section>
+
+  <section class="admin-section">
+    <mat-card class="admin-card">
+      <mat-card-header>
+        <div>
+          <mat-card-title>Doctor roster</mat-card-title>
+          <mat-card-subtitle>Keep the network of specialists up to date.</mat-card-subtitle>
+        </div>
+        <button mat-stroked-button color="primary" type="button" (click)="startNewDoctor()">
+          {{ isEditingDoctor ? 'Add new doctor' : 'Reset form' }}
+        </button>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="panel-grid">
+          <div class="panel-list">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Specialty</th>
+                  <th>Experience</th>
+                  <th>Rating</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let doctor of doctorList" [class.active-row]="selectedDoctorId() === doctor.id">
+                  <td>{{ doctor.name }}</td>
+                  <td>{{ doctor.specialty }}</td>
+                  <td>{{ doctor.experience }}</td>
+                  <td>{{ doctor.rating | number:'1.1-1' }}</td>
+                  <td class="actions">
+                    <button mat-button type="button" (click)="editDoctor(doctor)">Edit</button>
+                    <button mat-button color="warn" type="button" (click)="deleteDoctor(doctor)">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p *ngIf="doctorList.length === 0" class="empty-hint">No doctors listed. Add a doctor using the form.</p>
+          </div>
+
+          <form class="panel-form" [formGroup]="doctorForm" (ngSubmit)="saveDoctor()">
+            <h3>{{ isEditingDoctor ? 'Edit doctor' : 'Add new doctor' }}</h3>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Name</mat-label>
+              <input matInput formControlName="name" required>
+              <mat-error *ngIf="doctorForm.get('name')?.hasError('required')">Name is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Specialty</mat-label>
+              <input matInput formControlName="specialty" required>
+              <mat-error *ngIf="doctorForm.get('specialty')?.hasError('required')">Specialty is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Experience</mat-label>
+              <input matInput formControlName="experience" required>
+              <mat-error *ngIf="doctorForm.get('experience')?.hasError('required')">Experience is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Rating</mat-label>
+              <input matInput formControlName="rating" type="number" step="0.1" min="0" max="5" required>
+              <mat-error *ngIf="doctorForm.get('rating')?.hasError('required')">Rating is required</mat-error>
+              <mat-error *ngIf="doctorForm.get('rating')?.hasError('min') || doctorForm.get('rating')?.hasError('max')">
+                Rating must be between 0 and 5
+              </mat-error>
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button mat-raised-button color="primary" type="submit">{{ isEditingDoctor ? 'Save changes' : 'Create doctor' }}</button>
+            </div>
+          </form>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </section>
+</div>

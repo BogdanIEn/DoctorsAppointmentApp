@@ -1,0 +1,193 @@
+.admin-layout {
+  display: grid;
+  gap: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.admin-section {
+  display: flex;
+}
+
+.admin-card {
+  width: 100%;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 40px rgba(79, 70, 229, 0.1);
+  border: 1px solid rgba(79, 70, 229, 0.08);
+}
+
+mat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 28px;
+}
+
+mat-card-title {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+mat-card-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+mat-card-content {
+  padding: 0 28px 28px;
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+}
+
+.panel-list {
+  background: rgba(79, 70, 229, 0.04);
+  border-radius: 22px;
+  border: 1px solid rgba(79, 70, 229, 0.06);
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead {
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.data-table th {
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+
+.data-table tbody tr:not(:last-child) {
+  border-bottom: 1px solid rgba(79, 70, 229, 0.08);
+}
+
+.data-table tbody tr:hover {
+  background: rgba(79, 70, 229, 0.08);
+}
+
+.data-table tbody tr.active-row {
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.role-pill,
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 90px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.role-pill[data-role='admin'] {
+  background: rgba(124, 58, 237, 0.18);
+  color: #5b21b6;
+}
+
+.role-pill[data-role='patient'] {
+  background: rgba(59, 130, 246, 0.18);
+  color: #1d4ed8;
+}
+
+.status-pill[data-status='confirmed'] {
+  background: rgba(16, 185, 129, 0.2);
+  color: #047857;
+}
+
+.status-pill[data-status='pending'] {
+  background: rgba(250, 204, 21, 0.2);
+  color: #b45309;
+}
+
+.status-pill[data-status='cancelled'] {
+  background: rgba(248, 113, 113, 0.2);
+  color: #b91c1c;
+}
+
+.panel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 22px;
+  border: 1px solid rgba(79, 70, 229, 0.06);
+  padding: 24px;
+  box-shadow: inset 0 0 0 1px rgba(79, 70, 229, 0.05);
+}
+
+.panel-form h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.empty-hint {
+  margin: 0;
+  padding: 18px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 960px) {
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-form {
+    order: -1;
+  }
+}
+
+@media (max-width: 600px) {
+  mat-card-header,
+  mat-card-content {
+    padding: 20px;
+  }
+
+  .panel-form {
+    padding: 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}

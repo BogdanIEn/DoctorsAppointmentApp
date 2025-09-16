@@ -19,6 +19,7 @@ export class App {
   readonly currentUser = toSignal<User | null>(this.authService.currentUser$, {
     initialValue: null
   });
+  readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
   readonly userInitials = computed(() => {
     const user = this.currentUser();
     if (!user?.name) {
