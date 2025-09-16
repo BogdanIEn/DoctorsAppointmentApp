@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+﻿import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -60,7 +60,7 @@ import { Appointment } from '../../models/appointment.model';
           <th mat-header-cell *matHeaderCellDef>Actions</th>
           <td mat-cell *matCellDef="let appointment">
             <button mat-button color="warn" 
-                    *ngIf="appointment.status === 'confirmed'"
+                    *ngIf="appointment.status !== 'cancelled'"
                     (click)="cancelAppointment(appointment.id)">
               Cancel
             </button>
@@ -125,3 +125,4 @@ export class AppointmentsComponent {
     }
   }
 }
+

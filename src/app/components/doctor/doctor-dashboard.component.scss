@@ -1,0 +1,36 @@
+﻿.doctor-dashboard {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.doctor-card {
+  width: 100%;
+  max-width: 1100px;
+}
+
+.appointments-table {
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+.appointments-table th,
+.appointments-table td {
+  padding: 0.75rem 1rem;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.empty-state .hint {
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+}

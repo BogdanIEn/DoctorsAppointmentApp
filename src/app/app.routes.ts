@@ -1,6 +1,7 @@
-import { Routes } from '@angular/router';
+﻿import { Routes } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
 import { AdminGuard } from './guards/admin.guard';
+import { DoctorGuard } from './guards/doctor.guard';
 
 export const routes: Routes = [
   {
@@ -37,7 +38,13 @@ export const routes: Routes = [
     canActivate: [AdminGuard]
   },
   {
+    path: 'doctor',
+    loadComponent: () => import('./components/doctor/doctor-dashboard.component').then(m => m.DoctorDashboardComponent),
+    canActivate: [DoctorGuard]
+  },
+  {
     path: '**',
     redirectTo: '/dashboard'
   }
 ];
+

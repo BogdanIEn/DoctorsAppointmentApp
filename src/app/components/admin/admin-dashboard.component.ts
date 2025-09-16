@@ -42,8 +42,8 @@ export class AdminDashboardComponent {
   readonly appointments = toSignal(this.appointmentService.getAllAppointments(), { initialValue: [] as Appointment[] });
   readonly doctors = toSignal(this.doctorService.getDoctors(), { initialValue: [] as Doctor[] });
 
-  readonly roles: Array<User['role']> = ['patient', 'admin'];
-  readonly statuses: Array<Appointment['status']> = ['confirmed', 'pending', 'cancelled'];
+  readonly roles: Array<User['role']> = ['patient', 'doctor', 'admin'];
+  readonly statuses: Array<Appointment['status']> = ['pending', 'confirmed', 'cancelled'];
 
   readonly selectedUserId = signal<number | null>(null);
   readonly selectedAppointmentId = signal<number | null>(null);
@@ -51,6 +51,7 @@ export class AdminDashboardComponent {
 
   readonly userForm = this.fb.group({
     name: ['', Validators.required],
+    doctorId: [null as number | null],
     email: ['', [Validators.required, Validators.email]],
     phone: ['', Validators.required],
     role: ['patient', Validators.required],
@@ -63,7 +64,7 @@ export class AdminDashboardComponent {
     date: ['', Validators.required],
     time: ['', Validators.required],
     reason: ['', Validators.required],
-    status: ['confirmed', Validators.required]
+    status: ['pending', Validators.required]
   });
 
   readonly doctorForm = this.fb.group({
@@ -72,6 +73,12 @@ export class AdminDashboardComponent {
     experience: ['', Validators.required],
     rating: [4.5, [Validators.required, Validators.min(0), Validators.max(5)]]
   });
+
+  constructor() {
+    const roleControl = this.userForm.get('role');
+    roleControl?.valueChanges.subscribe(role => this.handleRoleChange(role as User['role']));
+    this.handleRoleChange(roleControl?.value as User['role']);
+  }
 
   get userList(): User[] {
     return this.users();
@@ -101,20 +108,87 @@ export class AdminDashboardComponent {
     return this.users().find(user => user.id === userId)?.name ?? 'Unknown';
   }
 
+  private handleRoleChange(role: User['role'] | null) {
+    const nameControl = this.userForm.get('name');
+    const doctorControl = this.userForm.get('doctorId');
+
+    if (!nameControl || !doctorControl) {
+      return;
+    }
+
+    if (role === 'doctor') {
+      if (nameControl.enabled) {
+        nameControl.disable({ emitEvent: false });
+      }
+      nameControl.setValidators(null);
+      doctorControl.enable({ emitEvent: false });
+      doctorControl.setValidators([Validators.required]);
+      this.syncDoctorNameFromSelection(doctorControl.value as number | null);
+    } else {
+      if (!nameControl.enabled) {
+        nameControl.enable({ emitEvent: false });
+      }
+      nameControl.setValidators([Validators.required]);
+      doctorControl.setValidators(null);
+      doctorControl.setErrors(null);
+      doctorControl.setValue(null, { emitEvent: false });
+      doctorControl.disable({ emitEvent: false });
+    }
+
+    nameControl.updateValueAndValidity({ emitEvent: false });
+    doctorControl.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private syncDoctorNameFromSelection(doctorId: number | null) {
+    const nameControl = this.userForm.get('name');
+    if (!nameControl) {
+      return;
+    }
+
+    const doctor = doctorId !== null
+      ? this.doctorList.find(d => d.id === doctorId)
+      : null;
+    const doctorName = doctor ? doctor.name : '';
+    nameControl.setValue(doctorName, { emitEvent: false });
+  }
+
+  onDoctorSelectionChange(doctorId: number | null) {
+    this.syncDoctorNameFromSelection(doctorId);
+  }
+
   startNewUser() {
     this.selectedUserId.set(null);
-    this.userForm.reset({ role: 'patient' });
+    this.userForm.reset({
+      name: '',
+      email: '',
+      phone: '',
+      role: 'patient',
+      password: '',
+      doctorId: null
+    });
+
+    this.handleRoleChange(this.userForm.get('role')?.value as User['role']);
   }
 
   editUser(user: User) {
     this.selectedUserId.set(user.id);
+    const matchedDoctor = user.role === 'doctor'
+      ? this.doctorList.find(doctor => doctor.name.trim().toLowerCase() === user.name.trim().toLowerCase())
+      : null;
     this.userForm.reset({
       name: user.name,
       email: user.email,
       phone: user.phone,
       role: user.role,
-      password: ''
+      password: '',
+      doctorId: matchedDoctor?.id ?? null
     });
+
+    if (user.role === 'doctor') {
+      this.syncDoctorNameFromSelection(matchedDoctor?.id ?? null);
+    }
+
+    this.handleRoleChange(user.role);
   }
 
   saveUser() {
@@ -123,13 +197,33 @@ export class AdminDashboardComponent {
       return;
     }
 
-    const value = this.userForm.value;
+    const value = this.userForm.getRawValue();
     const cleanPassword = value.password?.trim();
+    const role = (value.role ?? 'patient') as User['role'];
+
+    if (role === 'doctor') {
+      const doctorId = value.doctorId ?? null;
+      if (doctorId === null) {
+        const doctorControl = this.userForm.get('doctorId');
+        doctorControl?.setErrors({ required: true });
+        doctorControl?.markAsTouched();
+        return;
+      }
+
+      const doctor = this.doctorList.find(d => d.id === doctorId);
+      if (!doctor) {
+        this.snackBar.open('Selected doctor profile is no longer available.', 'Close', { duration: 3000 });
+        return;
+      }
+
+      value.name = doctor.name;
+    }
+
     const payload: Omit<User, 'id'> = {
-      name: value.name!,
+      name: (value.name ?? '').trim(),
       email: value.email!,
       phone: value.phone!,
-      role: (value.role ?? 'patient') as User['role'],
+      role,
       password: cleanPassword ? cleanPassword : undefined
     };
 
@@ -170,7 +264,7 @@ export class AdminDashboardComponent {
 
   startNewAppointment() {
     this.selectedAppointmentId.set(null);
-    this.appointmentForm.reset({ status: 'confirmed' });
+    this.appointmentForm.reset({ status: 'pending' });
   }
 
   editAppointment(appointment: Appointment) {

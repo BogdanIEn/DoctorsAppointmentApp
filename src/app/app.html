@@ -1,4 +1,4 @@
-<div class="app-shell">
+﻿<div class="app-shell">
   <div class="app-backdrop">
     <span class="backdrop-shape shape-one"></span>
     <span class="backdrop-shape shape-two"></span>
@@ -17,6 +17,7 @@
     <nav class="nav-links">
       <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
       <a *ngIf="currentUser()" routerLink="/profile" routerLinkActive="active" class="nav-link">Profile</a>
+      <a *ngIf="isDoctor()" routerLink="/doctor" routerLinkActive="active" class="nav-link">Doctor</a>
       <a *ngIf="isAdmin()" routerLink="/admin" routerLinkActive="active" class="nav-link">Admin</a>
     </nav>
 
@@ -44,3 +45,5 @@
     <span>&copy; {{ currentYear }} MediBook. Caring for you.</span>
   </footer>
 </div>
+
+

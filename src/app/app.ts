@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+﻿import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -20,6 +20,7 @@ export class App {
     initialValue: null
   });
   readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
+  readonly isDoctor = computed(() => this.currentUser()?.role === 'doctor');
   readonly userInitials = computed(() => {
     const user = this.currentUser();
     if (!user?.name) {

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, map, of, tap, throwError } from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Appointment, CreateAppointmentDto } from '../models/appointment.model';
@@ -160,7 +160,7 @@ export class AppointmentService {
     return {
       userId,
       ...normalizedDetails,
-      status: status ?? 'confirmed'
+      status: status ?? 'pending'
     };
   }
 

@@ -1,0 +1,27 @@
+﻿import { Injectable } from '@angular/core';
+import { CanActivate, Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
+
+@Injectable({ providedIn: 'root' })
+export class DoctorGuard implements CanActivate {
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
+
+  canActivate(): boolean {
+    const user = this.authService.getCurrentUser();
+
+    if (user && user.role === 'doctor') {
+      return true;
+    }
+
+    if (!user) {
+      this.router.navigate(['/auth/login']);
+    } else {
+      this.router.navigate(['/dashboard']);
+    }
+
+    return false;
+  }
+}

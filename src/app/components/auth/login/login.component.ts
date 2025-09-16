@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+﻿import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -96,7 +96,12 @@ export class LoginComponent {
         next: (user) => {
           if (user) {
             this.snackBar.open('Login successful!', 'Close', { duration: 3000 });
-            this.router.navigate(['/dashboard']);
+            const targetRoute = user.role === 'admin'
+              ? '/admin'
+              : user.role === 'doctor'
+                ? '/doctor'
+                : '/dashboard';
+            this.router.navigate([targetRoute]);
           } else {
             this.snackBar.open('Invalid email or password', 'Close', { duration: 3000 });
           }

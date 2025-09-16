@@ -41,10 +41,25 @@
           <form class="panel-form" [formGroup]="userForm" (ngSubmit)="saveUser()">
             <h3>{{ isEditingUser ? 'Edit user' : 'Add new user' }}</h3>
 
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" *ngIf="userForm.get('role')?.value !== 'doctor'">
               <mat-label>Full name</mat-label>
               <input matInput formControlName="name" required>
               <mat-error *ngIf="userForm.get('name')?.hasError('required')">Name is required</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" *ngIf="userForm.get('role')?.value === 'doctor'">
+              <mat-label>Doctor profile</mat-label>
+              <mat-select formControlName="doctorId" required (selectionChange)="onDoctorSelectionChange($event.value)">
+                <ng-container *ngIf="doctorList.length > 0; else noDoctorsOption">
+                  <mat-option *ngFor="let doctor of doctorList" [value]="doctor.id">
+                    {{ doctor.name }} - {{ doctor.specialty }}
+                  </mat-option>
+                </ng-container>
+                <ng-template #noDoctorsOption>
+                  <mat-option disabled>No doctors available</mat-option>
+                </ng-template>
+              </mat-select>
+              <mat-error *ngIf="userForm.get('doctorId')?.hasError('required')">Select a doctor</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -138,7 +153,7 @@
             <mat-form-field appearance="outline">
               <mat-label>Doctor</mat-label>
               <mat-select formControlName="doctorId" required>
-                <mat-option *ngFor="let doctor of doctorList" [value]="doctor.id">{{ doctor.name }} · {{ doctor.specialty }}</mat-option>
+                <mat-option *ngFor="let doctor of doctorList" [value]="doctor.id">{{ doctor.name }} ï¿½ {{ doctor.specialty }}</mat-option>
               </mat-select>
               <mat-error *ngIf="appointmentForm.get('doctorId')?.hasError('required')">Select a doctor</mat-error>
             </mat-form-field>
