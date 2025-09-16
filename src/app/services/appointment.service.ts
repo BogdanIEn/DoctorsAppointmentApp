@@ -1,10 +1,14 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, map, of, tap, throwError } from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Appointment } from '../models/appointment.model';
+import { Appointment, CreateAppointmentDto } from '../models/appointment.model';
 import { AuthService } from './auth.service';
 import { API_BASE_URL } from '../config/api.config';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+type CreateAppointmentPayload = Omit<CreateAppointmentDto, 'userId' | 'status'> & {
+  status?: CreateAppointmentDto['status'];
+};
 
 @Injectable({
   providedIn: 'root'
@@ -36,17 +40,13 @@ export class AppointmentService {
     return this.allAppointmentsSubject.asObservable();
   }
 
-  createAppointment(appointmentData: Omit<Appointment, 'id' | 'userId' | 'status' | 'createdAt'>): Observable<Appointment | null> {
+  createAppointment(appointmentData: CreateAppointmentPayload): Observable<Appointment | null> {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser) {
       return of(null);
     }
 
-    const payload = {
-      userId: currentUser.id,
-      status: 'confirmed',
-      ...appointmentData
-    };
+    const payload = this.buildCreatePayload(currentUser.id, appointmentData);
 
     return this.http.post<Appointment>(this.apiUrl, payload).pipe(
       tap(() => {
@@ -62,12 +62,8 @@ export class AppointmentService {
     );
   }
 
-  createAppointmentForUser(userId: number, appointmentData: Omit<Appointment, 'id' | 'userId' | 'status' | 'createdAt'> & { status?: Appointment['status'] }): Observable<Appointment | null> {
-    const payload = {
-      userId,
-      status: appointmentData.status ?? 'confirmed',
-      ...appointmentData
-    };
+  createAppointmentForUser(userId: number, appointmentData: CreateAppointmentPayload): Observable<Appointment | null> {
+    const payload = this.buildCreatePayload(userId, appointmentData);
 
     return this.http.post<Appointment>(this.apiUrl, payload).pipe(
       tap(() => {
@@ -84,7 +80,12 @@ export class AppointmentService {
   }
 
   updateAppointment(id: number, changes: Partial<Omit<Appointment, 'id' | 'createdAt'>>): Observable<Appointment | null> {
-    return this.http.put<Appointment>(`${this.apiUrl}/${id}`, changes).pipe(
+    const normalizedChanges: Partial<Omit<Appointment, 'id' | 'createdAt'>> = {
+      ...changes,
+      ...(changes.time ? { time: this.ensureTimeWithSeconds(changes.time) } : {})
+    };
+
+    return this.http.put<Appointment>(`${this.apiUrl}/${id}`, normalizedChanges).pipe(
       tap(updated => {
         this.refreshAllAppointments();
         const currentUser = this.authService.getCurrentUser();
@@ -121,9 +122,54 @@ export class AppointmentService {
   }
 
   cancelAppointment(id: number): Observable<boolean> {
-    return this.updateAppointment(id, { status: 'cancelled' }).pipe(
+    const appointment = this.findAppointmentById(id);
+    if (!appointment) {
+      return of(false);
+    }
+
+    const payload = this.buildUpdatePayload(appointment, 'cancelled');
+    return this.updateAppointment(id, payload).pipe(
       map(result => result !== null)
     );
+  }
+
+  private findAppointmentById(id: number): Appointment | undefined {
+    return this.allAppointmentsSubject.getValue().find(appointment => appointment.id === id)
+      ?? this.appointmentsSubject.getValue().find(appointment => appointment.id === id);
+  }
+
+  private buildUpdatePayload(appointment: Appointment, status: Appointment['status']): Partial<Omit<Appointment, 'id' | 'createdAt'>> {
+    return {
+      userId: appointment.userId,
+      doctorId: appointment.doctorId,
+      doctorName: appointment.doctorName,
+      date: appointment.date,
+      time: this.ensureTimeWithSeconds(appointment.time),
+      reason: appointment.reason,
+      status
+    };
+  }
+
+  private buildCreatePayload(userId: number, appointmentData: CreateAppointmentPayload): CreateAppointmentDto {
+    const { status, ...details } = appointmentData;
+    const normalizedDetails = {
+      ...details,
+      time: this.ensureTimeWithSeconds(details.time)
+    };
+
+    return {
+      userId,
+      ...normalizedDetails,
+      status: status ?? 'confirmed'
+    };
+  }
+
+  private ensureTimeWithSeconds(time: string): string {
+    if (time && /^\d{2}:\d{2}$/.test(time)) {
+      return `${time}:00`;
+    }
+
+    return time;
   }
 
   private loadAppointmentsForUser(userId: number) {

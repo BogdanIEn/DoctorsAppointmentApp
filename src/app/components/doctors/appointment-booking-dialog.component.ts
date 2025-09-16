@@ -45,12 +45,12 @@ import { Doctor } from '../../models/doctor.model';
         <mat-form-field appearance="outline">
           <mat-label>Time</mat-label>
           <mat-select formControlName="time" required>
-            <mat-option value="09:00">09:00 AM</mat-option>
-            <mat-option value="10:00">10:00 AM</mat-option>
-            <mat-option value="11:00">11:00 AM</mat-option>
-            <mat-option value="14:00">02:00 PM</mat-option>
-            <mat-option value="15:00">03:00 PM</mat-option>
-            <mat-option value="16:00">04:00 PM</mat-option>
+            <mat-option value="09:00:00">09:00 AM</mat-option>
+            <mat-option value="10:00:00">10:00 AM</mat-option>
+            <mat-option value="11:00:00">11:00 AM</mat-option>
+            <mat-option value="14:00:00">02:00 PM</mat-option>
+            <mat-option value="15:00:00">03:00 PM</mat-option>
+            <mat-option value="16:00:00">04:00 PM</mat-option>
           </mat-select>
         </mat-form-field>
 

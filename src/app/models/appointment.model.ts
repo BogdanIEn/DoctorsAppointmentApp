@@ -1,3 +1,15 @@
+export type AppointmentStatus = 'confirmed' | 'pending' | 'cancelled';
+
+export interface CreateAppointmentDto {
+  userId: number;
+  doctorId: number;
+  doctorName: string;
+  date: string;
+  time: string;
+  reason: string;
+  status: AppointmentStatus;
+}
+
 export interface Appointment {
   id: number;
   userId: number;
@@ -6,6 +18,6 @@ export interface Appointment {
   date: string;
   time: string;
   reason: string;
-  status: 'confirmed' | 'pending' | 'cancelled';
+  status: AppointmentStatus;
   createdAt: string;
 }
