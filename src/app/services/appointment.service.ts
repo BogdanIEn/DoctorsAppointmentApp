@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable, of, map } from 'rxjs';
 import { Appointment } from '../models/appointment.model';
 import { AuthService } from './auth.service';
 
@@ -14,24 +14,20 @@ export class AppointmentService {
   constructor(private authService: AuthService) {}
 
   getAppointments(): Observable<Appointment[]> {
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser) {
-      const userAppointments = this.appointments.filter(apt => apt.userId === currentUser.id);
-      return of(userAppointments);
-    }
-    return of([]);
+    return this.appointmentsSubject.asObservable().pipe(
+      map(() => this.filterAppointmentsForCurrentUser())
+    );
   }
 
   createAppointment(appointmentData: Omit<Appointment, 'id' | 'userId' | 'status' | 'createdAt'>): Observable<Appointment | null> {
     return new Observable(observer => {
-     const currentUser = this.authService.getCurrentUser();
+      const currentUser = this.authService.getCurrentUser();
       if (!currentUser) {
         observer.next(null);
         observer.complete();
         return;
       }
 
-      // Check for conflicts
       const conflict = this.appointments.find(apt => 
         apt.doctorId === appointmentData.doctorId && 
         apt.date === appointmentData.date && 
@@ -54,6 +50,7 @@ export class AppointmentService {
       };
 
       this.appointments.push(newAppointment);
+      this.emitAppointments();
       observer.next(newAppointment);
       observer.complete();
     });
@@ -63,8 +60,23 @@ export class AppointmentService {
     const appointment = this.appointments.find(apt => apt.id === id);
     if (appointment) {
       appointment.status = 'cancelled';
+      this.emitAppointments();
       return of(true);
     }
     return of(false);
+  }
+
+  private emitAppointments() {
+    this.appointmentsSubject.next([...this.appointments]);
+  }
+
+  private filterAppointmentsForCurrentUser(): Appointment[] {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) {
+      return [];
+    }
+
+    return this.appointments
+      .filter(apt => apt.userId === currentUser.id);
   }
 }

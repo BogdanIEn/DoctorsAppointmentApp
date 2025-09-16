@@ -1,9 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { AppointmentService } from '../../services/appointment.service';
 import { Appointment } from '../../models/appointment.model';
 
@@ -12,15 +15,17 @@ import { Appointment } from '../../models/appointment.model';
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     MatTableModule,
     MatButtonModule,
-    MatChipsModule
+    MatChipsModule,
+    MatSnackBarModule
   ],
   template: `
     <div class="appointments-container">
       <h2>My Appointments</h2>
       
-      <table mat-table [dataSource]="appointments" class="appointments-table">
+      <table mat-table [dataSource]="appointments()" class="appointments-table">
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Date</th>
           <td mat-cell *matCellDef="let appointment">
@@ -66,33 +71,28 @@ import { Appointment } from '../../models/appointment.model';
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
       </table>
 
-      <div *ngIf="appointments.length === 0" class="no-appointments">
+      <div *ngIf="appointments().length === 0" class="no-appointments">
         <p>No appointments found. <a routerLink="/dashboard">Book your first appointment!</a></p>
       </div>
     </div>
   `,
   styleUrls: ['./appointments.component.scss']
 })
-export class AppointmentsComponent implements OnInit {
-  appointments: Appointment[] = [];
+export class AppointmentsComponent {
+  private readonly appointmentService = inject(AppointmentService);
+  private readonly snackBar = inject(MatSnackBar);
+
+  readonly appointments = toSignal(
+    this.appointmentService.getAppointments().pipe(
+      map(appointments =>
+        [...appointments].sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      )
+    ),
+    { initialValue: [] as Appointment[] }
+  );
   displayedColumns: string[] = ['date', 'time', 'doctor', 'status', 'actions'];
-
-  constructor(
-    private appointmentService: AppointmentService,
-    private snackBar: MatSnackBar
-  ) {}
-
-  ngOnInit() {
-    this.loadAppointments();
-  }
-
-  loadAppointments() {
-    this.appointmentService.getAppointments().subscribe(appointments => {
-      this.appointments = appointments.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    });
-  }
 
   formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString();
@@ -100,7 +100,7 @@ export class AppointmentsComponent implements OnInit {
 
   formatTime(time: string): string {
     const [hour, minute] = time.split(':');
-    const hourNum = parseInt(hour);
+    const hourNum = parseInt(hour, 10);
     const ampm = hourNum >= 12 ? 'PM' : 'AM';
     const displayHour = hourNum === 0 ? 12 : hourNum > 12 ? hourNum - 12 : hourNum;
     return `${displayHour}:${minute} ${ampm}`;
@@ -120,7 +120,6 @@ export class AppointmentsComponent implements OnInit {
       this.appointmentService.cancelAppointment(id).subscribe(success => {
         if (success) {
           this.snackBar.open('Appointment cancelled successfully', 'Close', { duration: 3000 });
-          this.loadAppointments();
         }
       });
     }
