@@ -1,0 +1,32 @@
+{
+  "users": [
+    { "id": 1, "name": "Demo Admin", "email": "admin@demo.com", "password": "password123", "phone": "+1234567890", "role": "admin" },
+    { "id": 2, "name": "Demo Patient", "email": "patient@demo.com", "password": "password123", "phone": "+1987654321", "role": "patient" }
+  ],
+  "doctors": [
+    { "id": 1, "name": "Dr. Sarah Wilson", "specialty": "Cardiology", "experience": "15 years", "rating": 4.8 },
+    { "id": 2, "name": "Dr. Michael Chen", "specialty": "Dermatology", "experience": "12 years", "rating": 4.7 },
+    { "id": 3, "name": "Dr. Emily Johnson", "specialty": "Pediatrics", "experience": "18 years", "rating": 4.9 },
+    { "id": 4, "name": "Dr. David Rodriguez", "specialty": "Orthopedics", "experience": "20 years", "rating": 4.6 },
+    { "id": 5, "name": "Dr. Lisa Anderson", "specialty": "Neurology", "experience": "14 years", "rating": 4.8 },
+    { "id": 6, "name": "Dr. James Thompson", "specialty": "Internal Medicine", "experience": "16 years", "rating": 4.7 }
+  ],
+  "appointments": [
+    {
+      "id": 1,
+      "userId": 2,
+      "doctorId": 1,
+      "doctorName": "Dr. Sarah Wilson",
+      "date": "2025-09-20",
+      "time": "09:00",
+      "reason": "Annual check-up",
+      "status": "confirmed",
+      "createdAt": "2025-09-15T09:00:00.000Z"
+    }
+  ],
+  "nextIds": {
+    "users": 3,
+    "doctors": 7,
+    "appointments": 2
+  }
+}

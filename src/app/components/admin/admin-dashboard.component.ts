@@ -7,7 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../services/auth.service';
 import { AppointmentService } from '../../services/appointment.service';
 import { DoctorService } from '../../services/doctor.service';
@@ -38,9 +38,9 @@ export class AdminDashboardComponent {
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
 
-  private readonly usersSignal = signal<User[]>([]);
-  private readonly appointmentsSignal = signal<Appointment[]>([]);
-  private readonly doctorsSignal = signal<Doctor[]>([]);
+  readonly users = toSignal(this.authService.getUsers(), { initialValue: [] as User[] });
+  readonly appointments = toSignal(this.appointmentService.getAllAppointments(), { initialValue: [] as Appointment[] });
+  readonly doctors = toSignal(this.doctorService.getDoctors(), { initialValue: [] as Doctor[] });
 
   readonly roles: Array<User['role']> = ['patient', 'admin'];
   readonly statuses: Array<Appointment['status']> = ['confirmed', 'pending', 'cancelled'];
@@ -73,30 +73,16 @@ export class AdminDashboardComponent {
     rating: [4.5, [Validators.required, Validators.min(0), Validators.max(5)]]
   });
 
-  constructor() {
-    this.authService.getUsers()
-      .pipe(takeUntilDestroyed())
-      .subscribe(users => this.usersSignal.set(users));
-
-    this.appointmentService.getAllAppointments()
-      .pipe(takeUntilDestroyed())
-      .subscribe(appointments => this.appointmentsSignal.set(appointments));
-
-    this.doctorService.getDoctors()
-      .pipe(takeUntilDestroyed())
-      .subscribe(doctors => this.doctorsSignal.set(doctors));
-  }
-
   get userList(): User[] {
-    return this.usersSignal();
+    return this.users();
   }
 
   get appointmentList(): Appointment[] {
-    return this.appointmentsSignal();
+    return this.appointments();
   }
 
   get doctorList(): Doctor[] {
-    return this.doctorsSignal();
+    return this.doctors();
   }
 
   get isEditingUser(): boolean {
@@ -112,7 +98,7 @@ export class AdminDashboardComponent {
   }
 
   getUserName(userId: number): string {
-    return this.userList.find(user => user.id === userId)?.name ?? 'Unknown';
+    return this.users().find(user => user.id === userId)?.name ?? 'Unknown';
   }
 
   startNewUser() {
@@ -139,12 +125,11 @@ export class AdminDashboardComponent {
 
     const value = this.userForm.value;
     const cleanPassword = value.password?.trim();
-    const role = (value.role ?? 'patient') as User['role'];
     const payload: Omit<User, 'id'> = {
       name: value.name!,
       email: value.email!,
       phone: value.phone!,
-      role,
+      role: (value.role ?? 'patient') as User['role'],
       password: cleanPassword ? cleanPassword : undefined
     };
 
@@ -208,7 +193,7 @@ export class AdminDashboardComponent {
 
     const value = this.appointmentForm.value;
     const status = (value.status ?? 'confirmed') as Appointment['status'];
-    const doctor = this.doctorList.find(d => d.id === value.doctorId!);
+    const doctor = this.doctors().find(d => d.id === value.doctorId!);
     const doctorName = doctor ? doctor.name : 'Unknown Doctor';
     const payload = {
       doctorId: value.doctorId!,
@@ -279,12 +264,11 @@ export class AdminDashboardComponent {
     }
 
     const value = this.doctorForm.value;
-    const rating = Number(value.rating ?? 0);
     const payload: Omit<Doctor, 'id'> = {
       name: value.name!,
       specialty: value.specialty!,
       experience: value.experience!,
-      rating
+      rating: Number(value.rating ?? 0)
     };
 
     const selectedId = this.selectedDoctorId();

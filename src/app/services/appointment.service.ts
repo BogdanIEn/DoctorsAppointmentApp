@@ -1,200 +1,143 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of, map } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, map, of, tap, throwError } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Appointment } from '../models/appointment.model';
 import { AuthService } from './auth.service';
+import { API_BASE_URL } from '../config/api.config';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AppointmentService {
-  private appointments: Appointment[] = [];
+  private readonly apiUrl = `${API_BASE_URL}/appointments`;
   private appointmentsSubject = new BehaviorSubject<Appointment[]>([]);
-  private nextId = 1;
+  private allAppointmentsSubject = new BehaviorSubject<Appointment[]>([]);
 
-  constructor(private authService: AuthService) {
-    this.seedDemoAppointments();
+  constructor(private http: HttpClient, private authService: AuthService) {
+    this.authService.currentUser$
+      .pipe(takeUntilDestroyed())
+      .subscribe(user => {
+        if (user) {
+          this.loadAppointmentsForUser(user.id);
+        } else {
+          this.appointmentsSubject.next([]);
+        }
+      });
+
+    this.refreshAllAppointments();
   }
 
   getAppointments(): Observable<Appointment[]> {
-    return this.appointmentsSubject.asObservable().pipe(
-      map(() => this.filterAppointmentsForCurrentUser())
-    );
-  }
-
-  getAllAppointments(): Observable<Appointment[]> {
     return this.appointmentsSubject.asObservable();
   }
 
+  getAllAppointments(): Observable<Appointment[]> {
+    return this.allAppointmentsSubject.asObservable();
+  }
+
   createAppointment(appointmentData: Omit<Appointment, 'id' | 'userId' | 'status' | 'createdAt'>): Observable<Appointment | null> {
-    return new Observable(observer => {
-      const currentUser = this.authService.getCurrentUser();
-      if (!currentUser) {
-        observer.next(null);
-        observer.complete();
-        return;
-      }
-
-      if (this.hasConflict(appointmentData.doctorId, appointmentData.date, appointmentData.time)) {
-        observer.next(null);
-        observer.complete();
-        return;
-      }
-
-      const newAppointment = this.buildAppointment({
-        userId: currentUser.id,
-        status: 'confirmed',
-        ...appointmentData
-      });
-
-      this.appointments.push(newAppointment);
-      this.emitAppointments();
-      observer.next(newAppointment);
-      observer.complete();
-    });
-  }
-
-  createAppointmentForUser(userId: number, appointmentData: Omit<Appointment, 'id' | 'userId' | 'status' | 'createdAt'> & { status?: Appointment['status'] }): Observable<Appointment | null> {
-    return new Observable(observer => {
-      if (this.hasConflict(appointmentData.doctorId, appointmentData.date, appointmentData.time)) {
-        observer.next(null);
-        observer.complete();
-        return;
-      }
-
-      const newAppointment = this.buildAppointment({
-        userId,
-        status: appointmentData.status ?? 'confirmed',
-        ...appointmentData
-      });
-
-      this.appointments.push(newAppointment);
-      this.emitAppointments();
-      observer.next(newAppointment);
-      observer.complete();
-    });
-  }
-
-  updateAppointment(id: number, changes: Partial<Omit<Appointment, 'id' | 'createdAt'>>): Observable<Appointment | null> {
-    return new Observable(observer => {
-      const index = this.appointments.findIndex(apt => apt.id === id);
-      if (index === -1) {
-        observer.next(null);
-        observer.complete();
-        return;
-      }
-
-      const current = this.appointments[index];
-      const updated: Appointment = {
-        ...current,
-        ...changes
-      };
-
-      if (this.hasConflict(updated.doctorId, updated.date, updated.time, id)) {
-        observer.next(null);
-        observer.complete();
-        return;
-      }
-
-      this.appointments[index] = updated;
-      this.emitAppointments();
-      observer.next(updated);
-      observer.complete();
-    });
-  }
-
-  deleteAppointment(id: number): Observable<boolean> {
-    return new Observable(observer => {
-      const index = this.appointments.findIndex(apt => apt.id === id);
-      if (index === -1) {
-        observer.next(false);
-        observer.complete();
-        return;
-      }
-
-      this.appointments.splice(index, 1);
-      this.emitAppointments();
-      observer.next(true);
-      observer.complete();
-    });
-  }
-
-  cancelAppointment(id: number): Observable<boolean> {
-    const appointment = this.appointments.find(apt => apt.id === id);
-    if (appointment) {
-      appointment.status = 'cancelled';
-      this.emitAppointments();
-      return of(true);
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) {
+      return of(null);
     }
-    return of(false);
-  }
 
-  private buildAppointment(data: Omit<Appointment, 'id' | 'createdAt'> & { status: Appointment['status']; userId: number }): Appointment {
-    return {
-      id: this.nextId++,
-      createdAt: new Date().toISOString(),
-      ...data
+    const payload = {
+      userId: currentUser.id,
+      status: 'confirmed',
+      ...appointmentData
     };
-  }
 
-  private hasConflict(doctorId: number, date: string, time: string, ignoreId?: number): boolean {
-    return this.appointments.some(apt =>
-      apt.id !== ignoreId &&
-      apt.doctorId === doctorId &&
-      apt.date === date &&
-      apt.time === time &&
-      apt.status !== 'cancelled'
+    return this.http.post<Appointment>(this.apiUrl, payload).pipe(
+      tap(() => {
+        this.loadAppointmentsForUser(currentUser.id);
+        this.refreshAllAppointments();
+      }),
+      catchError(error => {
+        if (error.status === 409) {
+          return of(null);
+        }
+        return throwError(() => error);
+      })
     );
   }
 
-  private emitAppointments() {
-    this.appointmentsSubject.next([...this.appointments]);
+  createAppointmentForUser(userId: number, appointmentData: Omit<Appointment, 'id' | 'userId' | 'status' | 'createdAt'> & { status?: Appointment['status'] }): Observable<Appointment | null> {
+    const payload = {
+      userId,
+      status: appointmentData.status ?? 'confirmed',
+      ...appointmentData
+    };
+
+    return this.http.post<Appointment>(this.apiUrl, payload).pipe(
+      tap(() => {
+        this.loadAppointmentsForUser(userId);
+        this.refreshAllAppointments();
+      }),
+      catchError(error => {
+        if (error.status === 409) {
+          return of(null);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
-  private filterAppointmentsForCurrentUser(): Appointment[] {
-    const currentUser = this.authService.getCurrentUser();
-    if (!currentUser) {
-      return [];
-    }
-
-    return this.appointments
-      .filter(apt => apt.userId === currentUser.id);
+  updateAppointment(id: number, changes: Partial<Omit<Appointment, 'id' | 'createdAt'>>): Observable<Appointment | null> {
+    return this.http.put<Appointment>(`${this.apiUrl}/${id}`, changes).pipe(
+      tap(updated => {
+        this.refreshAllAppointments();
+        const currentUser = this.authService.getCurrentUser();
+        if (currentUser && updated.userId === currentUser.id) {
+          this.loadAppointmentsForUser(currentUser.id);
+        }
+      }),
+      catchError(error => {
+        if (error.status === 409) {
+          return of(null);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
-  private seedDemoAppointments() {
-    if (this.appointments.length === 0) {
-      const today = new Date();
-      const upcoming = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3);
-      const followUp = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 10);
-
-      this.appointments.push(
-        this.buildAppointment({
-          userId: 2,
-          doctorId: 1,
-          doctorName: 'Dr. Sarah Wilson',
-          date: this.toIsoDate(upcoming),
-          time: '09:00',
-          reason: 'Annual check-up',
-          status: 'confirmed'
-        })
-      );
-
-      this.appointments.push(
-        this.buildAppointment({
-          userId: 2,
-          doctorId: 3,
-          doctorName: 'Dr. Emily Johnson',
-          date: this.toIsoDate(followUp),
-          time: '14:30',
-          reason: 'Pediatric follow-up',
-          status: 'cancelled'
-        })
-      );
-    }
-
-    this.emitAppointments();
+  deleteAppointment(id: number): Observable<boolean> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
+      tap(() => {
+        this.refreshAllAppointments();
+        const currentUser = this.authService.getCurrentUser();
+        if (currentUser) {
+          this.loadAppointmentsForUser(currentUser.id);
+        }
+      }),
+      map(() => true),
+      catchError(error => {
+        if (error.status === 404) {
+          return of(false);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
-  private toIsoDate(date: Date): string {
-    return date.toISOString().split('T')[0];
+  cancelAppointment(id: number): Observable<boolean> {
+    return this.updateAppointment(id, { status: 'cancelled' }).pipe(
+      map(result => result !== null)
+    );
+  }
+
+  private loadAppointmentsForUser(userId: number) {
+    const params = new HttpParams().set('userId', userId);
+    this.http.get<Appointment[]>(this.apiUrl, { params }).subscribe({
+      next: appointments => this.appointmentsSubject.next(appointments),
+      error: error => console.error('Failed to load appointments', error)
+    });
+  }
+
+  private refreshAllAppointments() {
+    this.http.get<Appointment[]>(this.apiUrl).subscribe({
+      next: appointments => this.allAppointmentsSubject.next(appointments),
+      error: error => console.error('Failed to load appointments', error)
+    });
   }
 }

@@ -1,169 +1,95 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, map, of, tap, throwError } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { User } from '../models/user.model';
+import { API_BASE_URL } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  private readonly apiUrl = API_BASE_URL;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  private users: (User & { password?: string })[] = [
-    {
-      id: 1,
-      name: 'Demo Admin',
-      email: 'admin@demo.com',
-      password: 'password123',
-      phone: '+1234567890',
-      role: 'admin'
-    },
-    {
-      id: 2,
-      name: 'Demo Patient',
-      email: 'patient@demo.com',
-      password: 'password123',
-      phone: '+1987654321',
-      role: 'patient'
-    }
-  ];
   private usersSubject = new BehaviorSubject<User[]>([]);
 
-  constructor() {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser) as User;
-      if (!parsed.role) {
-        parsed.role = 'patient';
-      }
-      this.currentUserSubject.next(parsed);
-    }
-
-    this.emitUsers();
+  constructor(private http: HttpClient) {
+    this.restoreCurrentUser();
+    this.refreshUsers();
   }
 
   login(email: string, password: string): Observable<User | null> {
-    return new Observable(observer => {
-      const user = this.users.find(u => u.email === email && u.password === password);
-
-      if (user) {
-        const sanitized = this.sanitizeUser(user);
-        localStorage.setItem('currentUser', JSON.stringify(sanitized));
-        this.currentUserSubject.next(sanitized);
-        observer.next(sanitized);
-      } else {
-        observer.next(null);
-      }
-      observer.complete();
-    });
+    return this.http.post<User>(`${this.apiUrl}/auth/login`, { email, password }).pipe(
+      tap(user => this.setCurrentUser(user)),
+      tap(() => this.refreshUsers()),
+      catchError(error => {
+        if (error.status === 401) {
+          return of(null);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   register(userData: Omit<User, 'id' | 'role'>): Observable<User | null> {
-    return new Observable(observer => {
-      if (this.users.find(u => u.email === userData.email)) {
-        observer.next(null);
-        observer.complete();
-        return;
-      }
-
-      const newUser: User & { password?: string } = {
-        id: this.users.length + 1,
-        role: 'patient',
-        ...userData
-      };
-
-      this.users.push(newUser);
-      this.emitUsers();
-      observer.next(this.sanitizeUser(newUser));
-      observer.complete();
-    });
+    return this.http.post<User>(`${this.apiUrl}/auth/register`, userData).pipe(
+      tap(user => this.setCurrentUser(user)),
+      tap(() => this.refreshUsers()),
+      catchError(error => {
+        if (error.status === 409) {
+          return of(null);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   createUser(userData: Omit<User, 'id'>): Observable<User | null> {
-    return new Observable(observer => {
-      if (this.users.find(u => u.email === userData.email)) {
-        observer.next(null);
-        observer.complete();
-        return;
-      }
-
-      const newUser: User & { password?: string } = {
-        id: this.users.length + 1,
-        ...userData
-      };
-
-      if (!newUser.password) {
-        newUser.password = 'password123';
-      }
-
-      this.users.push(newUser);
-      this.emitUsers();
-      observer.next(this.sanitizeUser(newUser));
-      observer.complete();
-    });
+    return this.http.post<User>(`${this.apiUrl}/users`, userData).pipe(
+      tap(() => this.refreshUsers()),
+      catchError(error => {
+        if (error.status === 409) {
+          return of(null);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   updateUser(userId: number, changes: Partial<Omit<User, 'id'>>): Observable<User | null> {
-    return new Observable(observer => {
-      const userIndex = this.users.findIndex(u => u.id === userId);
-      if (userIndex === -1) {
-        observer.next(null);
-        observer.complete();
-        return;
-      }
-
-      if (changes.email) {
-        const emailTaken = this.users.some(u => u.email === changes.email && u.id !== userId);
-        if (emailTaken) {
-          observer.next(null);
-          observer.complete();
-          return;
+    return this.http.put<User>(`${this.apiUrl}/users/${userId}`, changes).pipe(
+      tap(updatedUser => {
+        if (this.currentUserSubject.value?.id === updatedUser.id) {
+          this.setCurrentUser(updatedUser);
         }
-      }
-
-      const existing = this.users[userIndex];
-      const updatedUser: User & { password?: string } = {
-        ...existing,
-        ...changes
-      };
-
-      if (!changes.password) {
-        updatedUser.password = existing.password;
-      }
-
-      this.users[userIndex] = updatedUser;
-      this.emitUsers();
-
-      if (this.currentUserSubject.value?.id === userId) {
-        const sanitized = this.sanitizeUser(updatedUser);
-        this.currentUserSubject.next(sanitized);
-        localStorage.setItem('currentUser', JSON.stringify(sanitized));
-      }
-
-      observer.next(this.sanitizeUser(updatedUser));
-      observer.complete();
-    });
+      }),
+      tap(() => this.refreshUsers()),
+      catchError(error => {
+        if (error.status === 409) {
+          return of(null);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   deleteUser(userId: number): Observable<boolean> {
-    return new Observable(observer => {
-      const index = this.users.findIndex(u => u.id === userId);
-      if (index === -1) {
-        observer.next(false);
-        observer.complete();
-        return;
-      }
-
-      const [removed] = this.users.splice(index, 1);
-      this.emitUsers();
-
-      if (this.currentUserSubject.value?.id === removed.id) {
-        this.logout();
-      }
-
-      observer.next(true);
-      observer.complete();
-    });
+    return this.http.delete<void>(`${this.apiUrl}/users/${userId}`).pipe(
+      tap(() => {
+        if (this.currentUserSubject.value?.id === userId) {
+          this.logout();
+        }
+        this.refreshUsers();
+      }),
+      map(() => true),
+      catchError(error => {
+        if (error.status === 404) {
+          return of(false);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   getUsers(): Observable<User[]> {
@@ -183,12 +109,22 @@ export class AuthService {
     return this.currentUserSubject.value !== null;
   }
 
-  private sanitizeUser(user: User & { password?: string }): User {
-    const { password, ...rest } = user;
-    return { ...rest };
+  private restoreCurrentUser() {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      this.currentUserSubject.next(JSON.parse(storedUser));
+    }
   }
 
-  private emitUsers() {
-    this.usersSubject.next(this.users.map(user => this.sanitizeUser(user)));
+  private setCurrentUser(user: User) {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    this.currentUserSubject.next(user);
+  }
+
+  private refreshUsers() {
+    this.http.get<User[]>(`${this.apiUrl}/users`).subscribe({
+      next: users => this.usersSubject.next(users),
+      error: error => console.error('Failed to load users', error)
+    });
   }
 }

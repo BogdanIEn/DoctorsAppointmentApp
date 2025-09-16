@@ -1,65 +1,59 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, map, of, tap, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { Doctor } from '../models/doctor.model';
+import { API_BASE_URL } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DoctorService {
-  private doctors: Doctor[] = [
-    { id: 1, name: 'Dr. Sarah Wilson', specialty: 'Cardiology', experience: '15 years', rating: 4.8 },
-    { id: 2, name: 'Dr. Michael Chen', specialty: 'Dermatology', experience: '12 years', rating: 4.7 },
-    { id: 3, name: 'Dr. Emily Johnson', specialty: 'Pediatrics', experience: '18 years', rating: 4.9 },
-    { id: 4, name: 'Dr. David Rodriguez', specialty: 'Orthopedics', experience: '20 years', rating: 4.6 },
-    { id: 5, name: 'Dr. Lisa Anderson', specialty: 'Neurology', experience: '14 years', rating: 4.8 },
-    { id: 6, name: 'Dr. James Thompson', specialty: 'Internal Medicine', experience: '16 years', rating: 4.7 }
-  ];
+  private readonly apiUrl = `${API_BASE_URL}/doctors`;
+  private doctorsSubject = new BehaviorSubject<Doctor[]>([]);
 
-  private doctorsSubject = new BehaviorSubject<Doctor[]>([...this.doctors]);
-  private nextId = this.doctors.length + 1;
+  constructor(private http: HttpClient) {
+    this.refreshDoctors();
+  }
 
   getDoctors(): Observable<Doctor[]> {
     return this.doctorsSubject.asObservable();
   }
 
-  getDoctorById(id: number): Observable<Doctor | undefined> {
-    return of(this.doctors.find(doctor => doctor.id === id));
-  }
-
   createDoctor(doctor: Omit<Doctor, 'id'>): Observable<Doctor> {
-    const newDoctor: Doctor = { id: this.nextId++, ...doctor };
-    this.doctors.push(newDoctor);
-    this.emitDoctors();
-    return of(newDoctor);
+    return this.http.post<Doctor>(this.apiUrl, doctor).pipe(
+      tap(() => this.refreshDoctors())
+    );
   }
 
   updateDoctor(id: number, changes: Partial<Omit<Doctor, 'id'>>): Observable<Doctor | null> {
-    const index = this.doctors.findIndex(doc => doc.id === id);
-    if (index === -1) {
-      return of(null);
-    }
-
-    this.doctors[index] = {
-      ...this.doctors[index],
-      ...changes
-    };
-
-    this.emitDoctors();
-    return of(this.doctors[index]);
+    return this.http.put<Doctor>(`${this.apiUrl}/${id}`, changes).pipe(
+      tap(() => this.refreshDoctors()),
+      catchError(error => {
+        if (error.status === 404) {
+          return of(null);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   deleteDoctor(id: number): Observable<boolean> {
-    const index = this.doctors.findIndex(doc => doc.id === id);
-    if (index === -1) {
-      return of(false);
-    }
-
-    this.doctors.splice(index, 1);
-    this.emitDoctors();
-    return of(true);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
+      tap(() => this.refreshDoctors()),
+      map(() => true),
+      catchError(error => {
+        if (error.status === 404) {
+          return of(false);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
-  private emitDoctors() {
-    this.doctorsSubject.next([...this.doctors]);
+  private refreshDoctors() {
+    this.http.get<Doctor[]>(this.apiUrl).subscribe({
+      next: doctors => this.doctorsSubject.next(doctors),
+      error: error => console.error('Failed to load doctors', error)
+    });
   }
 }
