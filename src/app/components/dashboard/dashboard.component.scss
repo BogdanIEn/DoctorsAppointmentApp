@@ -1,45 +1,74 @@
 .dashboard-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  
-  mat-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    
-    mat-card-header {
-      text-align: center;
-      margin-bottom: 20px;
-      
-      mat-card-title {
-        font-size: 32px;
-        color: #333;
-        font-weight: 500;
-      }
-    }
-    
-    mat-card-content {
-      padding: 24px;
-    }
-  }
-  
-  mat-tab-group {
-    mat-tab {
-      font-weight: 500;
-    }
-  }
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.dashboard-container mat-card {
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 40px rgba(79, 70, 229, 0.1);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(79, 70, 229, 0.08);
+}
+
+.dashboard-container mat-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 32px 0;
+}
+
+.dashboard-container mat-card-title {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-primary);
+}
+
+.dashboard-container mat-card-content {
+  padding: 0 32px 32px;
+}
+
+.dashboard-container mat-tab-group {
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(79, 70, 229, 0.06);
+}
+
+.dashboard-container ::ng-deep .mat-mdc-tab-group .mdc-tab {
+  font-weight: 600;
+  color: rgba(31, 41, 51, 0.6);
+}
+
+.dashboard-container ::ng-deep .mat-mdc-tab-group .mdc-tab--active {
+  color: var(--brand-primary);
+}
+
+.dashboard-container ::ng-deep .mat-mdc-tab-group .mdc-tab__ripple::before {
+  background-color: rgba(79, 70, 229, 0.12);
+}
+
+.dashboard-container ::ng-deep .mat-mdc-tab-group .mdc-tab-indicator__content--underline {
+  border-top-width: 3px;
+  border-color: var(--brand-primary);
+  border-radius: 999px;
 }
 
 @media (max-width: 768px) {
-  .dashboard-container {
-    mat-card {
-      mat-card-header mat-card-title {
-        font-size: 24px;
-     }
-      
-      mat-card-content {
-        padding: 16px;
-      }
-    }
+  .dashboard-container mat-card-header {
+    padding: 24px 24px 0;
+  }
+
+  .dashboard-container mat-card-title {
+    font-size: 24px;
+    text-align: center;
+  }
+
+  .dashboard-container mat-card-content {
+    padding: 0 20px 24px;
   }
 }

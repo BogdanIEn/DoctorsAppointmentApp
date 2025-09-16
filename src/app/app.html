@@ -1,2 +1,44 @@
+<div class="app-shell">
+  <div class="app-backdrop">
+    <span class="backdrop-shape shape-one"></span>
+    <span class="backdrop-shape shape-two"></span>
+    <span class="backdrop-shape shape-three"></span>
+  </div>
 
-<router-outlet />
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">MB</div>
+      <div class="brand-copy">
+        <span class="brand-title">MediBook</span>
+        <span class="brand-tagline">Your health, simplified</span>
+      </div>
+    </div>
+
+    <nav class="nav-links">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
+    </nav>
+
+    <div class="header-actions" *ngIf="currentUser(); else guestActions">
+      <span class="user-chip">
+        <span class="user-avatar">{{ userInitials() }}</span>
+        <span class="user-name">{{ currentUser()?.name }}</span>
+      </span>
+      <button type="button" class="btn btn-text" (click)="logout()">Logout</button>
+    </div>
+
+    <ng-template #guestActions>
+      <div class="header-actions">
+        <a routerLink="/auth/login" class="btn btn-text">Log in</a>
+        <a routerLink="/auth/register" class="btn btn-primary">Create account</a>
+      </div>
+    </ng-template>
+  </header>
+
+  <main class="app-content">
+    <router-outlet />
+  </main>
+
+  <footer class="app-footer">
+    <span>&copy; {{ currentYear }} MediBook. Caring for you.</span>
+  </footer>
+</div>
