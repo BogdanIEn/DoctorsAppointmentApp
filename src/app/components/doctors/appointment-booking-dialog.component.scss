@@ -1,0 +1,38 @@
+// src/app/components/doctors/appointment-booking-dialog.component.scss
+
+.appointment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 400px;
+  
+  mat-form-field {
+    width: 100%;
+  }
+  
+  textarea {
+    resize: vertical;
+  }
+}
+
+mat-dialog-content {
+  padding: 20px 24px;
+}
+
+mat-dialog-actions {
+  padding: 8px 24px 20px;
+  
+  button {
+    margin-left: 8px;
+    
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .appointment-form {
+    min-width: 280px;
+  }
+}

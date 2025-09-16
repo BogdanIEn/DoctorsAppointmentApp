@@ -1,0 +1,45 @@
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  
+  mat-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    
+    mat-card-header {
+      text-align: center;
+      margin-bottom: 20px;
+      
+      mat-card-title {
+        font-size: 32px;
+        color: #333;
+        font-weight: 500;
+      }
+    }
+    
+    mat-card-content {
+      padding: 24px;
+    }
+  }
+  
+  mat-tab-group {
+    mat-tab {
+      font-weight: 500;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    mat-card {
+      mat-card-header mat-card-title {
+        font-size: 24px;
+     }
+      
+      mat-card-content {
+        padding: 16px;
+      }
+    }
+  }
+}
