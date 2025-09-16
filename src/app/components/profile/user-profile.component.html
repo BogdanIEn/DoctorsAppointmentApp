@@ -1,0 +1,91 @@
+<ng-container *ngIf="profileUser() as user; else profileFallback">
+  <section class="profile-layout">
+    <aside class="profile-overview">
+      <div class="profile-card">
+        <div class="profile-avatar">{{ getInitials(user.name) }}</div>
+        <h1 class="profile-name">{{ user.name }}</h1>
+        <p class="profile-subtitle">Staying on top of your health journey</p>
+
+        <div class="profile-contact">
+          <div class="contact-row">
+            <span class="label">Email</span>
+            <span class="value">{{ user.email }}</span>
+          </div>
+          <div class="contact-row">
+            <span class="label">Phone</span>
+            <span class="value">{{ user.phone }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <h2>Quick tips</h2>
+        <ul>
+          <li>Keep your contact info up to date so doctors can reach you quickly.</li>
+          <li>Arrive 10 minutes early to each visit for a smoother experience.</li>
+          <li>Use the dashboard anytime to schedule follow-up appointments.</li>
+        </ul>
+      </div>
+    </aside>
+
+    <section class="profile-panels">
+      <div class="stats-card">
+        <h2>Your activity</h2>
+        <div class="stats-grid" *ngIf="appointmentStats() as stats">
+          <div class="stat">
+            <span class="stat-value">{{ stats.total }}</span>
+            <span class="stat-label">Total appointments</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">{{ stats.upcoming }}</span>
+            <span class="stat-label">Upcoming visits</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">{{ stats.cancelled }}</span>
+            <span class="stat-label">Cancelled</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="next-card" *ngIf="appointmentStats().next as next; else emptyState">
+        <div class="next-header">
+          <span class="badge">Next appointment</span>
+          <span class="next-date">{{ formatDate(next.date) }}</span>
+        </div>
+        <div class="next-body">
+          <h3>{{ next.doctorName }}</h3>
+          <p class="next-reason">{{ next.reason }}</p>
+          <div class="next-meta">
+            <div>
+              <span class="meta-label">Time</span>
+              <span class="meta-value">{{ formatTime(next.time) }}</span>
+            </div>
+            <div>
+              <span class="meta-label">Status</span>
+              <span class="meta-value status">{{ next.status | titlecase }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #emptyState>
+        <div class="next-card empty">
+          <h3>No upcoming appointments</h3>
+          <p>Schedule your next visit from the dashboard when you're ready.</p>
+          <a routerLink="/dashboard" class="btn btn-primary">Book appointment</a>
+        </div>
+      </ng-template>
+    </section>
+  </section>
+</ng-container>
+
+<ng-template #profileFallback>
+  <div class="profile-fallback">
+    <h2>You're not signed in</h2>
+    <p>Please log in to view your personal details.</p>
+    <div class="actions">
+      <a routerLink="/auth/login" class="btn btn-primary">Log in</a>
+      <a routerLink="/auth/register" class="btn btn-text">Create account</a>
+    </div>
+  </div>
+</ng-template>

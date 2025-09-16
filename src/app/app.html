@@ -16,6 +16,7 @@
 
     <nav class="nav-links">
       <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">Dashboard</a>
+      <a *ngIf="currentUser()" routerLink="/profile" routerLinkActive="active" class="nav-link">Profile</a>
     </nav>
 
     <div class="header-actions" *ngIf="currentUser(); else guestActions">
